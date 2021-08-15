@@ -15,14 +15,14 @@
 
 #include "lib/thread_seq.h"
 
-// std::map<int, int> &ref_count_execs_thread() {
-//  static auto result = new std::map<int, int>();
-//  return *result;
-//}
+std::map<int, int> &ref_count_execs_thread() {
+  static auto result = new std::map<int, int>();
+  return *result;
+}
 
 std::mutex m_keep_running;
 
-void hard_work_sync(bool *keep_running, ts::ThreadSeq *ts, int /*id*/) {
+void hard_work_sync(bool *keep_running, ts::ThreadSeq *ts, int id) {
   while (true) {
     {
       std::unique_lock<std::mutex> lk(m_keep_running);
@@ -31,9 +31,9 @@ void hard_work_sync(bool *keep_running, ts::ThreadSeq *ts, int /*id*/) {
       }
     }
 
-    ts->run_sync([/*id*/] {
-      //      std::cout << "running synchr........................." << id <<
-      //      std::endl; ref_count_execs_thread()[id] += 1;
+    ts->run_sync([id] {
+      std::cout << "running synchr........................." << id << std::endl;
+      ref_count_execs_thread()[id] += 1;
     });
     //    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
