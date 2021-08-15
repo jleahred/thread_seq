@@ -9,34 +9,51 @@
 
 #include <iostream>
 #include <map>
+#include <mutex>
+#include <thread>
 #include <vector>
 
-#include "lib/threadseq.h"
+#include "lib/thread_seq.h"
 
-std::map<int, int> &ref_count_execs_thread() {
-  static auto result = new std::map<int, int>();
-  return *result;
-}
+// std::map<int, int> &ref_count_execs_thread() {
+//  static auto result = new std::map<int, int>();
+//  return *result;
+//}
 
-void hard_work_sync(bool *keep_running, ts::ThreadSeq *ts, int id) {
-  while (*keep_running) {
-    ts->run_sync([id] {
-      std::cout << "running synchr........................." << id << std::endl;
-      ref_count_execs_thread()[id] += 1;
+std::mutex m_keep_running;
+
+void hard_work_sync(bool *keep_running, ts::ThreadSeq *ts, int /*id*/) {
+  while (true) {
+    {
+      std::unique_lock<std::mutex> lk(m_keep_running);
+      if (!*keep_running) {
+        return;
+      }
+    }
+
+    ts->run_sync([/*id*/] {
+      //      std::cout << "running synchr........................." << id <<
+      //      std::endl; ref_count_execs_thread()[id] += 1;
     });
     //    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
-  std::cout << "ended sync " << id << std::endl;
+  //  std::cout << "ended sync " << id << std::endl;
 }
 
-void hard_work_async(bool *keep_running, ts::ThreadSeq *ts, int id) {
-  while (*keep_running) {
-    ts->run_async([id] {
-      std::cout << "running Asynchr........................" << id << std::endl;
-      ref_count_execs_thread()[id] += 1;
+void hard_work_async(bool *keep_running, ts::ThreadSeq *ts, int /*id*/) {
+  while (true) {
+    {
+      std::unique_lock<std::mutex> lk(m_keep_running);
+      if (!*keep_running) {
+        return;
+      }
+    }
+    ts->run_async([/*id*/] {
+      //      std::cout << "running Asynchr........................" << id <<
+      //      std::endl; ref_count_execs_thread()[id] += 1;
     });
   }
-  std::cout << "ended Async " << id << std::endl;
+  //  std::cout << "ended Async " << id << std::endl;
 }
 
 int main() {
@@ -53,16 +70,20 @@ int main() {
         std::thread(hard_work_async, &keep_running, &ts, i + n_th));
   }
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(130000));
-  std::cout << "finishing....." << std::endl;
-  keep_running = false;
+  std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+  //  ts.run_sync([] { std::cout << "finishing....." << std::endl; });
+  {
+    std::unique_lock<std::mutex> lk(m_keep_running);
+    keep_running = false;
+  }
+
   for (auto &th : threads) {
     th.join();
   }
-  std::cout << "finished join....." << std::endl;
-  for (const auto i : ref_count_execs_thread()) {
-    std::cout << i.first << " " << i.second << std::endl;
-  }
+  //  std::cout << "finished join....." << std::endl;
+  //  for (const auto i : ref_count_execs_thread()) {
+  //    std::cout << i.first << " " << i.second << std::endl;
+  //  }
 }
 
 //#include <iostream>

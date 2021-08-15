@@ -3,8 +3,8 @@ import qbs
 CppApplication {
     consoleApplication: true
     files: [
-        "lib/threadseq.cpp",
-        "lib/threadseq.h",
+        "lib/thread_seq.cpp",
+        "lib/thread_seq.h",
         "main.cpp",
     ]
     cpp.dynamicLibraries: [ "pthread" ]

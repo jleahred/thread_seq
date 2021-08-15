@@ -187,6 +187,10 @@ Watch later in config, options to deal with it
     //  it could be a good idea to use it in order
     //  to control all possible exceptions
     cfg set_lambda_wrapper(std::function<void(std::function<void(void)>)> wr);
+
+    //    next are events of things that souldn't happen  ----------------------
+    //    lambda that will be called if an error happens
+    cfg set_on_critical_error(std::function<void(CriticalError err)> callback);
 ```
 
 Example...
@@ -201,6 +205,13 @@ Create a thread with maximum 100 elements queued on async, and writting a dot on
       );
 ```
 
+
+  //    next souldn't happen  ----------------------
+  //    lambda that will be called if an error happens
+  cfg set_on_critical_error(std::function<void(CriticalError err)> callback);
+
+
+
 ## FAQ
 
 ### Is it a header only  `library`?
@@ -211,4 +222,29 @@ Nop, but is a very small piece of code, it's very easy to do it if needed
 
 Yes, but it's easy to organize the code to avoid it
 
-If you produce a deadlock, the system will detect it, and it will throw an exception on `run_sync` caller
+If your code produce a deadlock, the system will detect it, and it will throw an exception on `run_sync` caller
+
+### What if I just want to pass messages?
+
+It's trivial to write a lambda capturing data (the message), with the code to run with this message
+
+You could easily save in a queue if you are happy with it. In general doesn't look a good idea as thread_seq are also managing a queue for async requests.
+
+When working with messages, you need to save in a queue, and later, process de queue and execute a function with each message.
+With tread_seq, you can configure both at same time
+
+### I want to syncrhonize cout
+
+You can do it just creating a thread_seq and calling from different threads...
+
+```cpp
+
+    data_to_write = ...
+
+    my_ts.run_async([&data_to_write]() {
+        std::cout << data_to_write << std::endl;
+    });
+
+```
+Done
+
