@@ -25,19 +25,27 @@ Well, there are no good standard general solutions.
 
 The use of `mutex` or `semaphores` or `critical sections`... are not an option.
 
-Of course, a good solution is messages passing and sharing little or nothing. But message passing is still a low-level mechanism. It requires a lot of awful code, type erasure for generic solutions, prior knowledge of types, bad performance...
+Of course, a good solution is message passing and sharing little or nothing. But message passing is still a low-level mechanism. It requires a lot of awful code, type erasure for generic solutions, prior knowledge of types, performance issues...
 
 And what if you want to run something on another thread and not continue until that execution is over?
 What if you want a `request-response`  between threads? Passing messages? too much work, no please!
 
+On sync coordination, we could receive a "result"
+
 
 Here I propose a higher level and simple model.
 
-The concept is to have a coordination or sequencing thread.
+This is a tool to create your own solutions, but instead of working with mutex, critical sections, conditional variables... you can use this higher level mecanism (easier to use)
 
-The rest of the threads will ask this thread to execute something on it.
+You can use this library to map directly your API, or to create objects with an internal thread, to simulate message passing, to have a threads pool...
 
-No passing messages, no deletion of types, with casting.
+The idea is to have a thread with two main methods...
+```
+  run_async
+  run_sync
+```
+
+No passing messages, no deletion of types, no type casting.
 
 You pass to this thread the code to be executed. As you can capture data in a lambda, you can pass code and context.
 It sounds nice  :-)
@@ -163,9 +171,44 @@ As you can see, the performance is bad and using all cores is bad
 
 Well, it's threads, you know  :-(
 
+## Errors
+
+The code passed to the thread, shoud not throw exceptions.
+
+Watch later in config, options to deal with it
+
+## Config
+
+```cpp
+    //  over this limit, the run_async will be sttoped till reduce the queue
+    cfg set_max_sync_queue_size(unsigned s);
+
+    //  lambda wrapper
+    //  it could be a good idea to use it in order
+    //  to control all possible exceptions
+    cfg set_lambda_wrapper(std::function<void(std::function<void(void)>)> wr);
+```
+
+Example...
+
+Create a thread with maximum 100 elements queued on async, and writting a dot on each call (sync or async)
+
+```cpp
+  ts::ThreadSeq ts(
+      ts::cfg()
+        .set_max_sync_queue_size(100)
+        .set_lambda_wrapper([](auto fn) { std::cout << "." << std::flush; fn(); })
+      );
+```
 
 ## FAQ
 
-#### Is it a header only  `library`?
+### Is it a header only  `library`?
 
 Nop, but is a very small piece of code, it's very easy to do it if needed
+
+### Calling run_sync can produce dead-locks?
+
+Yes, but it's easy to organize the code to avoid it
+
+If you produce a deadlock, the system will detect it, and it will throw an exception on `run_sync` caller
